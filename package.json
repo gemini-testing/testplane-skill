@@ -1,0 +1,23 @@
+{
+  "name": "testplane-skill",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "setup": "npm install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gemini-testing/testplane-skill.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gemini-testing/testplane-skill/issues"
+  },
+  "homepage": "https://github.com/gemini-testing/testplane-skill#readme",
+  "description": "",
+  "dependencies": {
+    "@testplane/cli": "^0.0.0"
+  }
+}
