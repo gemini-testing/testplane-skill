@@ -1,22 +1,15 @@
 ---
 name: testplane-skill
-description: Use when the user wants to write or debug tests on web apps and has testplane installed in project, when needs help with a Testplane project or to interact with a browser. Open URLs, interact with pages, see what's happening in the browser by taking efficient DOM snapshots or taking screenshots, do anything you can do in the browser.
+description: Use when the user wants to write, debug, or inspect Testplane end-to-end/component tests, work with a Testplane HTML report, inspect Time Travel snapshots, use Testplane CLI/MCP browser tools, or interact with a web app through Testplane.
 ---
 
 # Testplane Skill
 
-Testplane is a browser automation and end-to-end/component tests runner. It uses mocha interface and WebdriverIO to interact with browsers.
+Testplane is a browser automation and test runner based on Mocha and WebdriverIO. Use this skill to inspect real browser state, debug failing reports, and write or fix Testplane tests using project conventions.
 
-## Mandatory Initialization
+## Initialization
 
-CRITICAL - Path Resolution: This skill can be installed in different locations. Before running any commands from this skill, determine the actual directory that contains this `SKILL.md` file and use that path as `$SKILL_DIR`.
-
-Common installation locations:
-
-- `~/.claude/plugins/marketplaces/testplane-skill/`
-- `~/.claude/skills/testplane-skill`
-- `<project>/.claude/skills/testplane-skill`
-- `~/.codex/skills/.system/testplane-skill`
+Before running commands from this skill, resolve the directory that contains this `SKILL.md` and use it as `$SKILL_DIR`.
 
 One-time setup:
 
@@ -24,156 +17,187 @@ One-time setup:
 cd $SKILL_DIR && npm run setup
 ```
 
-Quick installation check:
+Quick check:
 
 ```bash
 node $SKILL_DIR/scripts/index.js
 ```
 
-## Mandatory Rules
-
-- If you need web exploration ALWAYS prefer using @testplane/cli's `navigate`+`snapshot`, NOT built-in browser automation commands and NOT fetching page via curl. @testplane/cli's snapshots are more compact and provide more context.
-- Always try to run @testplane/cli commands from the skill directory, not from the project root, e.g. `cd $SKILL_DIR && npx @testplane/cli navigate http://localhost:3000`. This is to avoid downloading the package over and over again.
-- When using @testplane/cli for web app exploration, prefer DOM `snapshot` command over `screenshot`. Use screenshots only when the user explicitly asks for one or when visual evidence is necessary and a DOM snapshot is not enough.
-- Avoid `browser.pause()` when writing and fixing tests. Use explicit waits for concrete page states, elements, text, URL changes, or network-independent outcomes.
-- Since Testplane is based on WebdriverIO, most WebdriverIO browser and element commands work in Testplane too. Reuse that knowledge, but follow the project's existing patterns first.
-- Prefer real selectors discovered from the running app over guessed selectors.
-- Prefer stable selectors: dedicated test ids or stable data attributes first, semantic selectors second, ids or names next. Avoid brittle CSS chains and positional selectors unless there is no better option.
-- Reuse existing project helpers, page objects, custom commands, and fixtures instead of bypassing them.
-- Never read secrets, credentials, `.env` files, cookies, tokens, or private auth material directly unless the user explicitly provides them for the task. Default to existing auth helpers, saved state, or a user-provided safe path.
-- Before writing a new test, explore the app first whenever possible. If the user did not provide a URL or a reproducible route, ask for it.
-
-## Workflow: Explore A Web App With `@testplane/cli`
-
-Use this workflow when you need to inspect what is happening in the browser before or during test work. This is especially useful for debugging selectors, understanding page structure, checking auth state, and observing what the app renders after actions.
-
-Principles:
-
-- Prefer exploration before writing a test from scratch.
-- Avoid `launch` unless the user explicitly wants a custom browser configuration. Browsers are usually launched automatically by normal CLI commands like `navigate`.
-
-Basic examples:
+Run `@testplane/cli` from `$SKILL_DIR` when possible to reuse the installed package:
 
 ```bash
+cd $SKILL_DIR && npx @testplane/cli --help
+```
+
+## Core Rules
+
+- Prefer the project's existing scripts, configs, helpers, page objects, fixtures, and custom commands.
+- Prefer real selectors discovered from the app or report over guessed selectors.
+- Prefer stable selectors: test ids/data attributes, semantic selectors, stable ids/names, then fallback CSS.
+- Prefer `@testplane/cli snapshot` over screenshots. Use screenshots only for visual evidence.
+- Do not use `browser.pause()` for test fixes. Wait for concrete page state, text, URL, element visibility/existence, or app-specific outcomes.
+- Never read secrets, credentials, `.env` files, raw cookies, tokens, or private auth material unless the user explicitly provides them. Use existing auth helpers or browser state files.
+- If the user provides a Testplane HTML report path or URL, inspect the report before changing tests.
+- If command syntax is unclear, run `npx @testplane/cli --help` or `npx @testplane/cli <command> --help`.
+
+## Browser Exploration With `@testplane/cli`
+
+Use this when you need to see what the app renders, discover selectors, verify auth state, or understand behavior before writing/fixing tests.
+
+```bash
+cd $SKILL_DIR
 npx @testplane/cli navigate http://localhost:3000
-npx @testplane/cli click '[data-testid="settings"]'
+npx @testplane/cli click --role button --name "Save"
 npx @testplane/cli snapshot
 ```
 
-Useful exploration loop:
+Useful commands:
 
-1. Navigate to the relevant URL or attach to an existing session.
-2. Perform one action at a time: click, hover, type, or wait.
+- `navigate <url> --timeout 60000`: open a page, auto-launching a browser if needed.
+- `snapshot`: capture a compact DOM snapshot; large snapshots are saved to a temp file.
+- `click`, `hover`, `type`, `select`, `wait`: interact with real elements.
+- `console`: read unseen browser console messages in Chromium-based sessions.
+- `run-code`: execute Testplane/WebdriverIO code when no built-in command fits.
+- `list-tabs`, `new-tab`, `switch-tab`, `close-tab`: work with tabs.
+- `attach --session <json>`: attach to the browser JSON printed after a `--keep-browser` Testplane run.
+- `--session-name <name>`: keep separate browser sessions for separate flows.
+
+Exploration loop:
+
+1. Navigate or attach to the relevant browser state.
+2. Perform one focused action.
 3. Capture a snapshot after meaningful state changes.
-4. Use the discovered structure and selectors to guide debugging or test authoring.
+4. Use discovered selectors and visible behavior in the test.
 
-If command syntax or options are unclear, inspect the current CLI:
+Avoid `launch` unless custom browser config is needed. Normal commands like `navigate` auto-launch a browser.
+
+## Debug From A Testplane Report
+
+Use this workflow first when the user provides a local or remote Testplane HTML report. Remote report URLs are downloaded and cached automatically by the CLI.
 
 ```bash
-npx @testplane/cli --help
-npx @testplane/cli click --help
+cd $SKILL_DIR
+npx @testplane/cli test-results <report> --status failed --fields name,status,browser,attempt,duration,file,error
+npx @testplane/cli inspect-result <report> --name "full test name" --browser chrome --attempt 0
 ```
 
-## Workflow: Run And Debug Existing Tests
+Report workflow:
 
-Use this workflow when the user asks to fix a failing test or understand why a test is unstable.
+1. List failures with `test-results`; add `--grep`, `--browser`, `--duration`, `--grep-error`, `--meta key=value`, or `--file` when needed.
+2. Inspect the concrete result with `inspect-result` using exact `name`, `browser`, and optionally `attempt`.
+3. Read status, error, steps, metadata, images, and attachments before editing code.
+4. If the result has a Time Travel snapshot attachment, inspect it with `time-travel-snapshot`.
+5. Only then decide whether the issue is test code, app behavior, auth/environment, timing, or visual baseline data.
 
-To run a concrete test, use: `npx testplane --grep "Check search field presence"`.
+For large result sets, save structured JSON:
 
-If user has scripts in package.json, use them instead, for example: `npm run test:e2e -- --grep "Check search field presence"`.
+```bash
+npx @testplane/cli test-results <report> --status failed --save-json
+```
 
-To run the whole file, use: `npx testplane tests/login.testplane.ts`.
+## Inspect Time Travel Snapshots
+
+Use `time-travel-snapshot` when a report includes Testplane Time Travel data or the user provides a snapshot zip. It replays the rrweb recording and returns a DOM snapshot at a selected time.
+
+```bash
+npx @testplane/cli time-travel-snapshot <report> \
+  --name "full test name" \
+  --browser chrome \
+  --attempt 0 \
+  --time 1400
+```
+
+Tips:
+
+- The output lists test steps with offsets; use those offsets as `--time` values.
+- Use `--diff-from <time>` to compare two points and focus on changed DOM nodes.
+- Use `--include-attrs data-qa href class` or `--max-text-length 200` when the default snapshot omits useful detail.
+- Use `--snapshot-file /path/to/snapshot.zip --time 100` when inspecting a snapshot directly.
+
+This is especially useful when the browser reached a broken state during a test and the live session is gone.
+
+## Debug With Testplane REPL
+
+REPL mode is useful when a running test has already driven the browser into the interesting state. It keeps you inside the project runtime, so agents can use existing page objects, custom commands, fixtures, and helpers instead of rebuilding behavior from raw selectors.
+
+Attach to an existing Testplane REPL session:
+
+```bash
+cd $SKILL_DIR
+npx @testplane/cli attach-repl --port 4444
+```
+
+Only two CLI actions are currently supported in REPL sessions:
+
+```bash
+npx @testplane/cli snapshot
+npx @testplane/cli run-code "await browser.getUrl()"
+```
+
+Use `run-code` for project-aware snippets, for example calling helpers already loaded by the test process. Other interaction commands such as `click`, `type`, and `wait` are not supported in REPL mode yet.
+
+## Handle Auth Safely
+
+Prefer existing login helpers or fixtures. When a reusable browser state is needed, use `save-state` and `restore-state` instead of reading secrets.
+
+```bash
+cd $SKILL_DIR
+npx @testplane/cli save-state ./tmp/auth-state.json
+npx @testplane/cli restore-state ./tmp/auth-state.json
+```
+
+Notes:
+
+- State can include cookies, localStorage, and sessionStorage.
+- The command output reports counts, not cookie values.
+- The saved file can contain real auth material; do not print it, commit it, or inspect it unless the user explicitly asks.
+- Use options such as `--cookies false`, `--local-storage false`, or `--session-storage false` to save only what is needed.
+- `restore-state` refreshes the page by default so app code observes restored state.
+
+## Run And Fix Existing Tests
+
+Use the narrowest reproducible command.
+
+```bash
+npx testplane --grep "Check search field presence"
+npx testplane tests/login.testplane.ts
+```
+
+If `package.json` has scripts, prefer them:
+
+```bash
+npm run test:e2e -- --grep "Check search field presence"
+```
 
 Checklist:
 
-1. Find the narrowest project command that runs the relevant test or suite.
-2. Read the test file and any nearby helpers, page objects, fixtures, or commands it depends on.
-3. Reproduce the failure with the smallest possible scope.
-4. Determine whether the issue is caused by the test, the app, auth state, environment setup, or timing assumptions.
-5. If browser behavior is unclear, inspect the live page through `@testplane/cli`.
-6. Replace sleeps and guesswork with explicit waits and concrete assertions.
+1. Find the smallest command that reproduces the issue.
+2. Read the test and nearby helpers/page objects/fixtures.
+3. If a report is available, inspect it first.
+4. If browser behavior is unclear, use CLI snapshots or REPL.
+5. Replace sleeps and guessed selectors with explicit waits and discovered selectors.
+6. Separate test bugs, app bugs, visual baseline issues, auth state, and environment failures.
 
-Debugging guidance:
+If the app only reaches the interesting page during the test, run with `--keep-browser` when available, then attach to the printed browser session JSON:
 
-- Always prefer running one file, one suite, or one test over the entire project unless broader context is required.
-- If the app only reaches the interesting page after test code runs, use `--keep-browser` and then attach with `@testplane/cli` to inspect the exact browser state left by the test.
-- When a failure is timing-related, wait for something real: element existence, visibility, text, URL, request-independent UI state, or a stable assertion target.
-- Separate environmental problems from product bugs. A broken local app, missing browser dependency, or expired auth state is different from a bad selector or a bad assertion.
-
-## Workflow: Write New Tests
-
-Use this workflow when the user asks to add coverage or implement a new test case.
-
-Always try to open the app first with `@testplane/cli` and explore the page before writing a test, to gather enough context.
-
-Checklist:
-
-1. Explore the real app first with `@testplane/cli` whenever possible.
-2. If the user did not provide a URL or route, ask for it.
-3. Reuse the project's existing helpers and conventions.
-4. Use real selectors discovered from the app.
-5. Prefer assertions on observable user outcomes over implementation details.
-6. Use explicit waits where needed, not `browser.pause()`.
-
-Writing guidance:
-
-- Codestyle MUST match nearby tests in the same area of the codebase.
-- Reuse login, navigation, state, and cleanup helpers if the project already has them.
-- If project uses page objects, use them instead of writing raw selectors.
-- Keep tests deterministic: avoid assertions that depend on arbitrary timing or unstable page structure.
-- Since Testplane is based on WebdriverIO, most WebdriverIO commands will work in Testplane too. Use that when it matches the project's existing style.
-- When in doubt, prefer arrange-act-assert pattern, clearly separating test structure and keeping tests simple and readable.
-
-## Recipes
-
-### Understanding Project Setup
-
-- Detect the package manager and inspect `package.json` scripts, looking for `testplane`, `hermione`, `e2e`, `test` scripts.
-- Find Testplane config files, by default it's `testplane.config.*`, `.testplane.conf.*` or `.hermione.conf.*` or what is referenced from package.json.
-- Check whether Testplane is installed in the project.
-- Determine how the application under test is started locally.
-- Identify browser configuration, `gridUrl`, local versus remote browser usage, and any required dependencies.
-- Look for legacy references to Hermione because older projects may still use that name in scripts, folders, or helper code.
-- Prefer the project's own scripts over hand-written one-off shell commands.
-
-### Handle Auth Without Reading Secrets
-
-- Look for existing login helpers, fixtures, `saveState`, and `restoreState`.
-- Reuse the project's established auth flow before inventing a new one.
-- Do not open secret files just to obtain credentials.
-- If auth cannot be reproduced safely from project helpers, ask the user for a safe route or a non-sensitive reproduction method.
-
-### Inspect A Post-Login State Before Finishing A Test
-
-Use this when the project already performs login in `beforeEach`, helper code, or fixtures, and you need to inspect the authenticated page before completing the test.
-
-Recommended approach:
-
-1. Run the specific test with Testplane using `--keep-browser`.
-2. Let the test drive the browser through login and into the relevant page state.
-3. Attach to that browser session with `@testplane/cli attach`.
-4. Explore the page with `snapshot`, `click`, `type`, `wait`, and other focused actions.
-5. Use what you learned to finish or fix the test.
-
-Example prompt pattern:
-
-```text
-Run the test "should be able to change settings" with Testplane using --keep-browser, then attach to the browser with @testplane/cli and inspect the page before completing the test.
+```bash
+npx @testplane/cli attach --session '{"sessionId":"...","capabilities":{...}}'
+npx @testplane/cli snapshot
 ```
 
-### Choose Selectors Deliberately
+## Write New Tests
 
-Prefer selectors in this order:
+Before writing from scratch, explore the real app whenever possible.
 
-1. dedicated test ids or stable data attributes
-2. stable semantic selectors or stable visible text when appropriate
-3. stable ids or names
-4. fallback CSS selectors only when better options are unavailable
+1. Identify project scripts, config, browser setup, and local app startup.
+2. Open the target route with `@testplane/cli`.
+3. Capture snapshots and choose selectors deliberately.
+4. Reuse existing helpers, page objects, auth, cleanup, and assertion patterns.
+5. Assert observable user outcomes rather than implementation details.
+6. Keep the test deterministic with explicit waits.
 
-Avoid brittle descendant chains, positional selectors, and selectors tied to incidental styling.
+Visual tests:
 
-### Use Visual Tests Intentionally
-
-- Use `assertView` when the task is really about visual regressions or rendering differences.
-- Do not default to visual checks when a DOM assertion is enough.
-- If the page contains animations, skeletons, or delayed rendering, stabilize the page first before capturing the visual assertion.
+- Use `assertView` only when the behavior is visual.
+- Stabilize animations, loading states, and dynamic content before capture.
+- Prefer DOM assertions when visual coverage is not required.
