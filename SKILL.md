@@ -1,17 +1,27 @@
 ---
 name: testplane-skill
-description: Use when the user wants to write, debug, or inspect Testplane end-to-end/component tests, work with a Testplane HTML report, inspect Time Travel snapshots, use Testplane CLI/MCP browser tools, or interact with a web app through Testplane.
+description: Use when the user wants to configure Testplane Selectivity or селективность Testplane, write, debug, or inspect Testplane end-to-end/component tests, work with a Testplane HTML report, inspect Time Travel snapshots, use Testplane CLI/MCP browser tools, or interact with a web app through Testplane.
 ---
 
 # Testplane Skill
 
 Testplane is a browser automation and test runner based on Mocha and WebdriverIO. Use this skill to inspect real browser state, debug failing reports, and write or fix Testplane tests using project conventions.
 
+## Configure Selectivity
+
+For requests such as "Set up Testplane Selectivity" or "Настрой Testplane селективность", start with [the selectivity workflow](references/selectivity/README.md) and its [interactive execution boundary](references/selectivity/interaction.md). Make configuration/static-check progress first, then propose browser/heavy validation and wait for consent. Acceptance is required for a verified claim, not permission to run. This task uses the project's Testplane installation and does not require the CLI initialization below unless browser exploration is also needed.
+
+## Execution consent
+
+Do not launch browser tests, browser exploration, builds, installs/downloads, servers or other heavy work without explicit user consent for that scope. First inspect available source/config/report/map files and perform known lightweight syntax/offline checks. When further confidence needs heavy execution, propose the actual commands, cost, side effects and cleanup, then wait. A request to configure or fix tests is not itself permission to run them. An explicit request for the same scoped run is consent, not a reason to ask twice.
+
+This boundary applies to every command example below, including initialization and auto-launching CLI tools. Inspect scripts and lifecycle hooks before running anything. Use installed tools without implicit downloads. If the user declines or gives no consent, summarize completed work and unverified behavior without running, scheduling or delegating the pending commands. Follow the [detailed consent workflow](references/selectivity/interaction.md) for scope changes and retries.
+
 ## Initialization
 
 Before running commands from this skill, resolve the directory that contains this `SKILL.md` and use it as `$SKILL_DIR`.
 
-One-time setup:
+One-time setup, only if needed and installation is explicitly approved:
 
 ```bash
 cd $SKILL_DIR && npm run setup
@@ -156,7 +166,7 @@ Notes:
 
 ## Run And Fix Existing Tests
 
-Use the narrowest reproducible command.
+First inspect the test, helpers and any existing report. Propose the narrowest reproducible command and run it only within the user's approved scope. The examples below are not launch permission.
 
 ```bash
 npx testplane --grep "Check search field presence"
@@ -187,7 +197,7 @@ npx @testplane/cli snapshot
 
 ## Write New Tests
 
-Before writing from scratch, explore the real app whenever possible.
+Before writing from scratch, inspect existing sources/reports. Propose real-app exploration when it is needed, and use the browser steps below only with consent.
 
 1. Identify project scripts, config, browser setup, and local app startup.
 2. Open the target route with `@testplane/cli`.
