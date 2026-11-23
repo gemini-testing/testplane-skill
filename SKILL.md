@@ -1,6 +1,6 @@
 ---
 name: testplane-skill
-description: Use when the user wants to configure Testplane Selectivity or селективность Testplane, write, debug, or inspect Testplane end-to-end/component tests, work with a Testplane HTML report, inspect Time Travel snapshots, use Testplane CLI/MCP browser tools, or interact with a web app through Testplane.
+description: Use when the user wants to configure Testplane Selectivity or селективность Testplane, write, debug, or inspect Testplane end-to-end/component tests, work with a Testplane HTML report, inspect Time Travel snapshots or captured network traffic, use Testplane CLI/MCP browser tools, or interact with a web app through Testplane.
 ---
 
 # Testplane Skill
@@ -125,6 +125,32 @@ Tips:
 - Use `--snapshot-file /path/to/snapshot.zip --time 100` when inspecting a snapshot directly.
 
 This is especially useful when the browser reached a broken state during a test and the live session is gone.
+
+
+## Debug Network Requests
+
+Use `network-list` to find the request, `network-inspect` to see its full URL, headers, status, failure details and available timings, and `network-body` when you need the captured payload. The CLI and MCP use the same tool names. Check that the installed CLI lists `network-list` in its help. With a built `testplane-ai` checkout, use `node /path/to/testplane-ai/packages/cli/build/cli.js` in place of `testplane-cli` below.
+
+**Live browser.** Launch or attach to a Chromium session with CDP available, then reproduce the action. Capture starts when the CLI or MCP opens or attaches to the session. Use the request ID from the list in that same session.
+
+```bash
+testplane-cli network-list --type fetch,xhr --errors
+testplane-cli network-inspect 7
+testplane-cli network-body 7
+```
+
+`--errors` includes HTTP 4xx/5xx responses and network failures. For an unexpected success response, narrow the list with a URL substring such as `--url /api/orders` or a method such as `--method POST`. List and inspect accept `--json`. Body returns the response by default. Use `--request` for the submitted payload and `--output <path>` for binary data. URLs and bodies can contain secrets even when sensitive headers are masked.
+
+**Saved report.** Select the exact test name, browser and attempt from `test-results`. Repeat the same source options for list, inspect and body. Without `--attempt`, the CLI selects the latest attempt, which may be a passing retry.
+
+```bash
+testplane-cli network-list --report ./html-report --name "Checkout submits order" --browser chrome --attempt 0 --errors
+testplane-cli network-inspect 7 --report ./html-report --name "Checkout submits order" --browser chrome --attempt 0
+```
+
+For a snapshot ZIP, use `--snapshot-file ./snapshot.zip` in place of the report options.
+
+To capture network data in a Chromium test report, use Testplane 9.6.0+ with the `html-reporter` plugin 11.18.0+ enabled. Set `timeTravel: { mode: "on", network: true }` in the Testplane config, or add `network: true` to your existing active Time Travel mode.
 
 ## Debug With Testplane REPL
 

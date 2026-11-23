@@ -25,6 +25,7 @@ npx skills add gemini-testing/testplane-skill
 - write and fix Testplane tests using existing project patterns
 - inspect local or remote Testplane HTML reports
 - debug Time Travel snapshots from reports
+- [debug network requests](SKILL.md#debug-network-requests) in a live Chromium session or a saved Time Travel recording
 - attach to Testplane REPL sessions and use project helpers
 - handle auth through `save-state` and `restore-state`
 
